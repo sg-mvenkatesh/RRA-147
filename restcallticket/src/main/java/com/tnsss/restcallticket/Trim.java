@@ -1,0 +1,21 @@
+package com.tnsss.restcallticket;
+public class Trim
+{
+    private String trimName;
+
+    public String getTrimName ()
+    {
+        return trimName;
+    }
+
+    public void setTrimName (String trimName)
+    {
+        this.trimName = trimName;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "ClassPojo [trimName = "+trimName+"]";
+    }
+}
