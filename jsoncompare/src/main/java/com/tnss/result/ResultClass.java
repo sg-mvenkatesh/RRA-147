@@ -112,5 +112,23 @@ public class ResultClass {
 	public void setRetailCost(boolean retailCost) {
 		this.retailCost = retailCost;
 	}
-	 
+	
+	@Override
+	public String toString() {
+		return "ResultClass [productSku_java=" + productSku_java + ", productSku_mule=" + productSku_mule
+				+ ", productSku=" + productSku + ", dealerCost_java=" + dealerCost_java + ", dealerCost_mule="
+				+ dealerCost_mule + ", dealerCost=" + dealerCost + ", multiType_java=" + multiType_java
+				+ ", multiType_mule=" + multiType_mule + ", multiType=" + multiType + ", formNumber_java="
+				+ formNumber_java + ", formNumber_mule=" + formNumber_mule + ", formNumber=" + formNumber
+				+ ", retailCost_java=" + retailCost_java + ", retailCost_mule=" + retailCost_mule + ", retailCost="
+				+ retailCost + ", getProductSku_java()=" + getProductSku_java() + ", getProductSku_mule()="
+				+ getProductSku_mule() + ", isProductSku()=" + isProductSku() + ", getDealerCost_java()="
+				+ getDealerCost_java() + ", getDealerCost_mule()=" + getDealerCost_mule() + ", isDealerCost()="
+				+ isDealerCost() + ", getMultiType_java()=" + getMultiType_java() + ", getMultiType_mule()="
+				+ getMultiType_mule() + ", isMultiType()=" + isMultiType() + ", getFormNumber_java()="
+				+ getFormNumber_java() + ", getFormNumber_mule()=" + getFormNumber_mule() + ", isFormNumber()="
+				+ isFormNumber() + ", getRetailCost_java()=" + getRetailCost_java() + ", getRetailCost_mule()="
+				+ getRetailCost_mule() + ", isRetailCost()=" + isRetailCost() + ", getClass()=" + getClass()
+				+ ", hashCode()=" + hashCode() + ", toString()=" + super.toString() + "]";
+	}
 }
