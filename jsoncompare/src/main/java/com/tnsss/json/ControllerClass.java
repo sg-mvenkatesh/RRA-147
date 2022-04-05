@@ -1,7 +1,13 @@
 package com.tnsss.json;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -43,10 +49,15 @@ public class ControllerClass {
 
 	@GetMapping("/javaapi")
 	public ProductRateDetails[] getJavaApiData(@RequestParam String saleDate, String vin, String dealerCode,
-			@RequestParam(required = false, defaultValue = "0") String odometer,
-			@RequestParam(required = false, defaultValue = "new") String vehicleCondition) {
-		String urlJava = javaAPIUrl + javaAPIContextPath
-				+ "?saleDate={saleDate}&vin={vin}&dealer={dealerCode}&odometer={odometer}&vehicleCondition={vehicleCondition}";
+			@RequestParam(required = false) String odometer, @RequestParam(required = false) String vehicleCondition) {
+
+		String urlJava = javaAPIUrl + javaAPIContextPath + "?saleDate={saleDate}&vin={vin}&dealer={dealerCode}";
+
+		if (odometer != null)
+			urlJava += "&odometer={odometer}";
+		if (vehicleCondition != null)
+			urlJava += "&vehicleCondition={vehicleCondition}";
+
 		RatesResponseTemplet JavaApiDatainJavaObj = template.getForObject(urlJava, RatesResponseTemplet.class, saleDate,
 				vin, dealerCode, odometer, vehicleCondition);
 		ProductRateDetails[] productRateDetails = JavaApiDatainJavaObj.getData().getProductRateDetails();
@@ -54,40 +65,51 @@ public class ControllerClass {
 	}
 
 	@GetMapping("/muleapi")
-	private ProductRateDetails[] getMuleApiData(@RequestParam String saleDate, String vin, String dealerCode,
-			@RequestParam(required = false, defaultValue = "0") String odometer) {
-		String urlMule = muleAPIUrl + muleAPIContextPath
-				+ "?saleDate={saleDate}&vin={vin}&dealerCode={dealerCode}&odometer={odometer}";
+	public ProductRateDetails[] getMuleApiData(@RequestParam String saleDate, String vin, String dealerCode,
+			@RequestParam(required = false) String odometer, @RequestParam(required = false) String vehicleCondition) {
+
+		String urlMule = muleAPIUrl + muleAPIContextPath + "?saleDate={saleDate}&vin={vin}&dealerCode={dealerCode}";
+
+		if (odometer != null)
+			urlMule += "&odometer={odometer}";
+		if (vehicleCondition != null)
+			urlMule += "&vehicleCondition={vehicleCondition}";
+
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Client_id", "5b0c387efa6942a297808086528e3393");
 		headers.set("Client_secret", "bf1F8E59d74E4c0FB5D85F8AbC4C150F");
 		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 		HttpEntity<String> entity = new HttpEntity<String>(headers);
 		ResponseEntity<RatesResponseTemplet> exchange = template.exchange(urlMule, HttpMethod.GET, entity,
-				RatesResponseTemplet.class, saleDate, vin, dealerCode, odometer);
+				RatesResponseTemplet.class, saleDate, vin, dealerCode, odometer, vehicleCondition);
 		ProductRateDetails[] productRateDetails = exchange.getBody().getData().getProductRateDetails();
 
 		return productRateDetails;
 	}
 
 	@GetMapping("/compare")
-	private Object[] getCompare(@RequestParam String saleDate, String vin, String dealerCode,
-			@RequestParam(required = false, defaultValue = "0") String odometer) {
-		ProductRateDetails[] javaApiData = getJavaApiData(saleDate, vin, dealerCode, odometer);
-		ProductRateDetails[] muleApi = getMuleApiData(saleDate, vin, dealerCode, odometer);
+	public Object[] getCompare(@RequestParam String saleDate, String vin, String dealerCode,
+			@RequestParam(required = false) String odometer, @RequestParam(required = false) String vehicleCondition) {
+
+		ProductRateDetails[] javaApiData = getJavaApiData(saleDate, vin, dealerCode, odometer, vehicleCondition);
+		ProductRateDetails[] muleApi = getMuleApiData(saleDate, vin, dealerCode, odometer, vehicleCondition);
+
+		Set<String> allJavaSku = new TreeSet<String>();
+		Set<String> allMuleSku = new TreeSet<String>();
 		ArrayList<ResultClass> resultArray = new ArrayList<ResultClass>();
+
 		Object[] array = null;
 
 		for (int i = 0; i <= javaApiData.length - 1; i++) {
 			String productSkuJavaApi = javaApiData[i].getProductSku();
+			allJavaSku.add(productSkuJavaApi);
+
 			for (int j = 0; j <= muleApi.length - 1; j++) {
-
 				String productSkuMuleApi = muleApi[j].getProductSku();
-
+				allMuleSku.add(productSkuMuleApi);
 				try {
 					if (productSkuJavaApi.contentEquals(productSkuMuleApi)) {
 						ResultClass result = new ResultClass();
-
 						result.setProductSku_java(javaApiData[i].getProductSku());
 						result.setDealerCost_java(javaApiData[i].getDealerCost());
 						result.setMultiType_java(javaApiData[i].getMultiType());
@@ -112,6 +134,12 @@ public class ControllerClass {
 
 						resultArray.add(result);
 						j = muleApi.length - 1;
+					} else {
+						ResultClass result = new ResultClass();
+						result.setProductSku_mule(productSkuMuleApi);
+						result.setNot_Matched(productSkuMuleApi + " not matched with Java API");
+						resultArray.add(result);
+
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
