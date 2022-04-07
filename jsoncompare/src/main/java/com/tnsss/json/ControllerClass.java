@@ -1,12 +1,9 @@
 package com.tnsss.json;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,12 +63,13 @@ public class ControllerClass {
 
 	@GetMapping("/muleapi")
 	public ProductRateDetails[] getMuleApiData(@RequestParam String saleDate, String vin, String dealerCode,
-			@RequestParam(required = false) String odometer, @RequestParam(required = false) String vehicleCondition) {
+//			@RequestParam(required = false) String odometer,
+			@RequestParam(required = false) String vehicleCondition) {
 
 		String urlMule = muleAPIUrl + muleAPIContextPath + "?saleDate={saleDate}&vin={vin}&dealerCode={dealerCode}";
 
-		if (odometer != null)
-			urlMule += "&odometer={odometer}";
+//		if (odometer != null)
+//			urlMule += "&odometer={odometer}";
 		if (vehicleCondition != null)
 			urlMule += "&vehicleCondition={vehicleCondition}";
 
@@ -81,9 +79,8 @@ public class ControllerClass {
 		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 		HttpEntity<String> entity = new HttpEntity<String>(headers);
 		ResponseEntity<RatesResponseTemplet> exchange = template.exchange(urlMule, HttpMethod.GET, entity,
-				RatesResponseTemplet.class, saleDate, vin, dealerCode, odometer, vehicleCondition);
+				RatesResponseTemplet.class, saleDate, vin, dealerCode, vehicleCondition);
 		ProductRateDetails[] productRateDetails = exchange.getBody().getData().getProductRateDetails();
-		System.out.println(productRateDetails.length);
 		return productRateDetails;
 	}
 
@@ -92,10 +89,8 @@ public class ControllerClass {
 			@RequestParam(required = false) String odometer, @RequestParam(required = false) String vehicleCondition) {
 
 		ProductRateDetails[] javaApiData = getJavaApiData(saleDate, vin, dealerCode, odometer, vehicleCondition);
-		ProductRateDetails[] muleApi = getMuleApiData(saleDate, vin, dealerCode, odometer, vehicleCondition);
-		
-		System.out.println(muleApi.length);
-		
+		ProductRateDetails[] muleApi = getMuleApiData(saleDate, vin, dealerCode, vehicleCondition);
+
 		ArrayList<ResultClass> resultArray = new ArrayList<ResultClass>();
 
 		Object[] array = null;
@@ -145,34 +140,55 @@ public class ControllerClass {
 
 	@GetMapping("/notmatched")
 	public Object[] getNotMachedWithMule(@RequestParam String saleDate, String vin, String dealerCode,
-			@RequestParam(required = false) String odometer,
-			@RequestParam(required = false) String vehicleCondition) {
+			@RequestParam(required = false) String odometer, @RequestParam(required = false) String vehicleCondition) {
 
 		ProductRateDetails[] javaApiData = getJavaApiData(saleDate, vin, dealerCode, odometer, vehicleCondition);
-		ProductRateDetails[] muleApi = getMuleApiData(saleDate, vin, dealerCode, odometer, vehicleCondition);
-		
-		for(int i=0; i<= javaApiData.length-1; i++) {
-			System.out.println(javaApiData[i].getProductSku());
+		ProductRateDetails[] muleApi = getMuleApiData(saleDate, vin, dealerCode, vehicleCondition);
+
+		Map<String, String> responseMap = new TreeMap<>();
+		ArrayList<String> allJavaSku = new ArrayList<String>();
+		ArrayList<String> allMuleSku = new ArrayList<String>();
+
+		// get java and mule count
+		int javaObjectCount = javaApiData.length;
+		int muleObjectCount = muleApi.length;
+
+		responseMap.put("java Object Count", String.valueOf(javaObjectCount));
+		responseMap.put("mule Object Count", String.valueOf(muleObjectCount));
+
+		// get extra products
+		for (int i = 0; i <= javaApiData.length - 1; i++) {
+			allJavaSku.add(javaApiData[i].getProductSku());
 		}
-		/*
-		 * ArrayList<String> allJavaSku = new ArrayList<String>(); ArrayList<String>
-		 * allMuleSku = new ArrayList<String>();
-		 * 
-		 * for(int i = 0; i<=javaApiData.length-1; i++ ) {
-		 * allJavaSku.add(javaApiData[i].getProductSku()); }
-		 * 
-		 * for(int i = 0; i<=muleApi.length-1; i++ ) {
-		 * allMuleSku.add(muleApi[i].getProductSku()); } boolean containsAll =
-		 * allMuleSku.containsAll(allJavaSku);
-		 * System.out.println(containsAll+" all java is sku is present in mule api");
-		 * boolean containsAll2 = allJavaSku.containsAll(allMuleSku);
-		 * System.out.println(containsAll2+" all mule is sku is present in java api");
-		 * allMuleSku.removeAll(allJavaSku);
-		 */
-//		Object[] array = allMuleSku.toArray();
-		Object[] array = null;
-		return array;
+
+		for (int j = 0; j <= muleApi.length - 1; j++) {
+			allMuleSku.add(muleApi[j].getProductSku());
+		}
+		// checking weather both has same size of objs in java and mule
+		if (javaObjectCount == muleObjectCount) {
+			// if same checking all the sku is matching with both are not.
+			boolean checkJavaWithMule = allMuleSku.containsAll(allJavaSku);// t r f
+			boolean checkMuleWithJava = allJavaSku.containsAll(allMuleSku);// t r f
+			// if yes then say no extra products.
+			if (checkJavaWithMule == true && checkMuleWithJava == true) {
+				responseMap.put("Extra Products: ",
+						" No Extra products all the products are matching with each other response..!");
+			}
+		} 
 		
+		if(javaObjectCount != muleObjectCount){
+//			 take an array of any 1 and compare others each sku with all that array 
+//			if nothing is matching then return that sku as a extra product
+					for (int k = 0; k <= allMuleSku.size()-1; k++) {
+						String mule = allMuleSku.get(k);
+						if (!allJavaSku.contains(mule)) {
+							responseMap.put(mule, " : not matched with any of the sku of java API.");
+						}
+					}
+			}
+		Object[] array = responseMap.entrySet().toArray();
+		return array;
+
 	}
 
 }
